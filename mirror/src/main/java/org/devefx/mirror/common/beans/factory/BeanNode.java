@@ -12,11 +12,11 @@ import org.devefx.mirror.common.reflection.invoker.MethodInvoker;
 import org.devefx.mirror.common.reflection.invoker.SetMethodInvoker;
 
 /**
- * BeanInfo
+ * BeanNode
  * @author： youqian.yue
  * @date： 2016-1-19 下午2:22:25
  */
-public class BeanInfo {
+public class BeanNode {
 	
 	private Object bean;
 	private boolean created;
@@ -37,7 +37,7 @@ public class BeanInfo {
 	private int constructorArgIndex;
 	private String propertyName;
 	
-	public BeanInfo(String beanName, Class<?> beanClass, String initMethod) {
+	public BeanNode(String beanName, Class<?> beanClass, String initMethod) {
 		this.beanName = beanName;
 		this.beanClass = beanClass;
 		this.initMethod = initMethod;
@@ -115,9 +115,9 @@ public class BeanInfo {
 			for (Map.Entry<Integer, Object> entry : constructorArgMap.entrySet()) {
 				Object val = entry.getValue();
 				if (val instanceof Ref) {
-					BeanInfo beanInfo = ((Ref) val).getBeanInfo();
-					if (beanInfo != null && beanInfo.isCreated()) {
-						val = beanInfo.getBean();
+					BeanNode beanNode = ((Ref) val).getBeanNode();
+					if (beanNode != null && beanNode.isCreated()) {
+						val = beanNode.getBean();
 						constructorArgMap.put(entry.getKey(), val);
 					} else {
 						throw new BeanCreateException("No bean named '" + ((Ref) val).getBeanName() + "' is defined");
@@ -154,9 +154,9 @@ public class BeanInfo {
 			String key = entry.getKey();
 			Object val = entry.getValue();
 			if (val instanceof Ref) {
-				BeanInfo beanInfo = ((Ref) val).getBeanInfo();
-				if (beanInfo != null && beanInfo.isCreated()) {
-					new SetMethodInvoker(key).invoke(bean, beanInfo.getBean());
+				BeanNode beanNode = ((Ref) val).getBeanNode();
+				if (beanNode != null && beanNode.isCreated()) {
+					new SetMethodInvoker(key).invoke(bean, beanNode.getBean());
 				} else {
 					throw new BeanCreateException("Error creating bean with name '" + beanName + "' instantiation of bean failed." +
 							"  Cause: No bean named '" + ((Ref) val).getBeanName() + "' is defined");
@@ -187,9 +187,9 @@ public class BeanInfo {
 				for (int i = 0, n = list.size(); i < n; i++) {
 					Object val = list.get(0);
 					if (val instanceof Ref) {
-						BeanInfo beanInfo = ((Ref) val).getBeanInfo();
-						if (beanInfo != null && beanInfo.isCreated()) {
-							list.set(i, beanInfo.getBean());
+						BeanNode beanNode = ((Ref) val).getBeanNode();
+						if (beanNode != null && beanNode.isCreated()) {
+							list.set(i, beanNode.getBean());
 						} else {
 							throw new BeanCreateException("No bean named '" + ((Ref) val).getBeanName() + "' is defined");
 						}
@@ -204,19 +204,19 @@ public class BeanInfo {
 					Object key = entry.getKey();
 					Object val = entry.getValue();
 					if (key instanceof Ref) {
-						BeanInfo beanInfo = ((Ref) key).getBeanInfo();
-						if (beanInfo != null && beanInfo.isCreated()) {
+						BeanNode beanNode = ((Ref) key).getBeanNode();
+						if (beanNode != null && beanNode.isCreated()) {
 							map.remove(key);
-							key = beanInfo.getBean();
+							key = beanNode.getBean();
 							map.put(key, val);
 						} else {
 							throw new BeanCreateException("No bean named '" + ((Ref) key).getBeanName() + "' is defined");
 						}
 					}
 					if (val instanceof Ref) {
-						BeanInfo beanInfo = ((Ref) val).getBeanInfo();
-						if (beanInfo != null && beanInfo.isCreated()) {
-							val = beanInfo.getBean();
+						BeanNode beanNode = ((Ref) val).getBeanNode();
+						if (beanNode != null && beanNode.isCreated()) {
+							val = beanNode.getBean();
 							map.put(key, val);
 						} else {
 							throw new BeanCreateException("No bean named '" + ((Ref) val).getBeanName() + "' is defined");
@@ -229,18 +229,18 @@ public class BeanInfo {
 	// Ref
 	public static class Ref {
 		private String beanName;
-		private BeanInfo beanInfo;
+		private BeanNode beanNode;
 		public Ref(String beanName) {
 			this.beanName = beanName;
 		}
 		public String getBeanName() {
 			return beanName;
 		}
-		public BeanInfo getBeanInfo() {
-			return beanInfo;
+		public BeanNode getBeanNode() {
+			return beanNode;
 		}
-		public void setBeanInfo(BeanInfo beanInfo) {
-			this.beanInfo = beanInfo;
+		public void setBeanNode(BeanNode beanNode) {
+			this.beanNode = beanNode;
 		}
 		@Override
 		public int hashCode() {

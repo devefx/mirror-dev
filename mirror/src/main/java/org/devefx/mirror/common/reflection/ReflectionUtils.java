@@ -1,8 +1,17 @@
 package org.devefx.mirror.common.reflection;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.devefx.mirror.sqlmap.engine.type.TypeHandler;
 import org.devefx.mirror.sqlmap.engine.type.TypeHandlerFactory;
@@ -21,26 +30,38 @@ public class ReflectionUtils {
 	
 	public static String toSetter(String name) {
 		if (!isGetter(name)) {
-			return "set" + name.substring(0, 1).toUpperCase()
-					+ (name.length() != 1 ? name.substring(1) : "");
+			return "set" + firstUpper(name);
 		}
 		return name;
 	}
 	
 	public static String toGetter(Class<?> clazz, String name) {
 		if (!isGetter(name)) {
-			String newName = name.substring(0, 1).toUpperCase();
-			if (name.length() != 1)
-				newName += name.substring(1);
 			try {
-				Class<?> type = clazz.getDeclaredField(name).getType();
-				return (type == boolean.class || type == Boolean.class ? "is" : "get")
-						+ newName;
+				return toGetter(clazz.getDeclaredField(name), name);
 			} catch (NoSuchFieldException e) {
-				return newName;
 			}
 		}
+		return firstUpper(name);
+	}
+	
+	public static String toGetter(Field field, String name) {
+		if (!isGetter(name)) {
+			Class<?> type = field.getType();
+			return (type == boolean.class || type == Boolean.class ? "is" : "get")
+					+ firstUpper(name);
+		}
 		return name;
+	}
+	
+	public static String firstUpper(String str) {
+		if (str != null && !str.isEmpty()) {
+			String newStr = str.substring(0, 1).toUpperCase();
+			if (str.length() != 1)
+				newStr += str.substring(1);
+			return newStr;
+		}
+		return str;
 	}
 	
 	public static Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes, List<Object> args) throws ReflectionException {
@@ -117,4 +138,60 @@ public class ReflectionUtils {
 		}
 		return false;
 	}
+	
+	/**
+	 * 扫描包里面的全部Class
+	 * @param basePackage
+	 * @return Set<Class<?>>
+	 */
+	public static Set<Class<?>> getClasses(String basePackage) {
+		Set<Class<?>> classes = new LinkedHashSet<Class<?>>();
+		
+		String packageName = basePackage;
+		String packageDirName = packageName.replace('.', '/');
+		
+		Enumeration<URL> dirs = null;
+		try {
+			dirs = Thread.currentThread().getContextClassLoader().getResources(packageDirName);
+			while (dirs.hasMoreElements()) {
+				URL url = dirs.nextElement();
+				String protocol = url.getProtocol();
+				if ("file".equals(protocol)) {
+					String filePath = URLDecoder.decode(url.getFile(), "UTF-8");
+					findClasses(classes, packageName, filePath);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return classes;
+	}
+	
+	private static void findClasses(Set<Class<?>> classes, String packageName, String packagePath) {
+		File dir = new File(packagePath);
+		if (!dir.exists() || !dir.isDirectory()) {
+			return;
+		}
+		File[] files = dir.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File file) {
+				return file.isDirectory() || (file.isFile() && file.getName().endsWith(".class"));
+			}
+		});
+		for (File file : files) {
+			if (file.isDirectory()) {
+				findClasses(classes, packageName + "." + file.getName(), file.getPath());
+			} else {
+				String className = file.getName();
+				className = className.substring(0, className.length() - 6);
+				try {
+					ClassLoader loader = Thread.currentThread().getContextClassLoader();
+					classes.add(loader.loadClass(packageName + "." + className));
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
 }

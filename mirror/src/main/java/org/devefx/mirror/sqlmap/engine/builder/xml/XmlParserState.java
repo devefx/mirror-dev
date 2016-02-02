@@ -6,13 +6,20 @@ import javax.sql.DataSource;
 
 import org.devefx.mirror.common.beans.BeanManager;
 import org.devefx.mirror.common.resources.Resources;
+import org.devefx.mirror.sqlmap.engine.config.SqlMapConfiguration;
 
 public class XmlParserState {
+	
+	private SqlMapConfiguration config = new SqlMapConfiguration();
 	
 	private Properties globalProps = new Properties();
 	private DataSource dataSource;
 	private BeanManager beanManager = new BeanManager();
 
+	public SqlMapConfiguration getConfig() {
+		return config;
+	}
+	
 	public Properties getGlobalProps() {
 		return globalProps;
 	}
@@ -50,4 +57,5 @@ public class XmlParserState {
 	public BeanManager getBeanManager() {
 		return beanManager;
 	}
+	
 }

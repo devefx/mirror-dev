@@ -7,33 +7,33 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.devefx.mirror.common.beans.factory.BeanInfo.Ref;
+import org.devefx.mirror.common.beans.factory.BeanNode.Ref;
 
-public class BeanInfoManager {
+public class BeanNodeManager {
 	
-	private List<BeanInfo> beanInfos;
+	private List<BeanNode> beanNodes;
 	private Map<String, Ref> refMap;
 	
-	public BeanInfoManager() {
-		beanInfos = new ArrayList<BeanInfo>();
+	public BeanNodeManager() {
+		beanNodes = new ArrayList<BeanNode>();
 		refMap = new HashMap<String, Ref>();
 	}
 	
-	public void addBeanInfo(BeanInfo beanInfo) {
-		Ref ref = refMap.get(beanInfo.getBeanName());
+	public void addBeanNode(BeanNode beanNode) {
+		Ref ref = refMap.get(beanNode.getBeanName());
 		if (ref != null) {
-			ref.setBeanInfo(beanInfo);
+			ref.setBeanNode(beanNode);
 		}
-		beanInfos.add(beanInfo);
+		beanNodes.add(beanNode);
 	}
 	
-	public BeanInfo getBeanInfo(String name, Class<?> requiredType) {
-		Iterator<BeanInfo> iterator = beanInfos.iterator();
+	public BeanNode getBeanNote(String name, Class<?> requiredType) {
+		Iterator<BeanNode> iterator = beanNodes.iterator();
 		while (iterator.hasNext()) {
-			BeanInfo beanInfo = iterator.next();
-			if ((requiredType == null || requiredType == beanInfo.getBeanClass()) &&
-					((name == beanInfo.getBeanName())) || (name != null && name.equals(beanInfo.getBeanName()))) {
-				return beanInfo;
+			BeanNode beanNode = iterator.next();
+			if ((requiredType == null || requiredType == beanNode.getBeanClass()) &&
+					((name == beanNode.getBeanName())) || (name != null && name.equals(beanNode.getBeanName()))) {
+				return beanNode;
 			}
 		}
 		return null;
@@ -48,7 +48,7 @@ public class BeanInfoManager {
 			Ref ref = refMap.get(beanName);
 			if (ref == null) {
 				ref = new Ref(beanName);
-				ref.setBeanInfo(getBeanInfo(beanName, null));
+				ref.setBeanNode(getBeanNote(beanName, null));
 				refMap.put(beanName, ref);
 			}
 			return ref;
@@ -59,17 +59,17 @@ public class BeanInfoManager {
 	 * 构建bean
 	 * @throws BeanCreateException void
 	 */
-	public List<BeanInfo> build() throws BeanCreateException {
-		List<BeanInfo> list = new ArrayList<BeanInfo>();
-		while (!beanInfos.isEmpty()) {
+	public List<BeanNode> build() throws BeanCreateException {
+		List<BeanNode> list = new ArrayList<BeanNode>();
+		while (!beanNodes.isEmpty()) {
 			boolean created = false;
 			BeanCreateException exception = null;
-			for (int i = beanInfos.size() - 1; i != -1; i--) {
-				BeanInfo beanInfo = beanInfos.get(i);
+			for (int i = beanNodes.size() - 1; i != -1; i--) {
+				BeanNode beanNode = beanNodes.get(i);
 				try {
-					if (beanInfo.build()) {
-						list.add(beanInfo);
-						beanInfos.remove(i);
+					if (beanNode.build()) {
+						list.add(beanNode);
+						beanNodes.remove(i);
 						created = true;
 					}
 				} catch (BeanCreateException e) {
@@ -80,9 +80,9 @@ public class BeanInfoManager {
 				throw exception;
 			}
 		}
-		for (BeanInfo beanInfo : list) {
+		for (BeanNode beanNode : list) {
 			try {
-				beanInfo.init();
+				beanNode.init();
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
 			} catch (IllegalArgumentException e) {

@@ -9,13 +9,14 @@ import java.util.Properties;
 import javax.sql.DataSource;
 
 import org.devefx.mirror.common.beans.factory.BeanCreateException;
-import org.devefx.mirror.common.beans.factory.BeanInfo;
-import org.devefx.mirror.common.beans.factory.BeanInfoManager;
-import org.devefx.mirror.common.beans.factory.BeanInfo.Ref;
+import org.devefx.mirror.common.beans.factory.BeanNode;
+import org.devefx.mirror.common.beans.factory.BeanNodeManager;
+import org.devefx.mirror.common.beans.factory.BeanNode.Ref;
 import org.devefx.mirror.common.resources.Resources;
 import org.devefx.mirror.common.xml.Nodelet;
 import org.devefx.mirror.common.xml.NodeletParser;
 import org.devefx.mirror.common.xml.NodeletUtils;
+import org.devefx.mirror.sqlmap.client.SqlMapClient;
 import org.w3c.dom.Node;
 
 public class SqlMapConfigParser {
@@ -24,25 +25,37 @@ public class SqlMapConfigParser {
 	private XmlParserState state = new XmlParserState();
 	
 	public SqlMapConfigParser() {
+		addSqlMapConfigNodelets();
 		addGlobalPropNodelets();
 		addBeanCreateNodelets();
 		addSettingNodelets();
 	}
 	
-	public void parse(Reader reader) {
+	public SqlMapClient parse(Reader reader) {
 		try {
 			parser.parse(reader);
+			return state.getConfig().getClient();
 		} catch (Exception e) {
 			throw new RuntimeException("Error occurred.  Cause: " + e, e);
 		}
 	}
 	
-	public void parse(InputStream inputStream) {
+	public SqlMapClient parse(InputStream inputStream) {
 		try {
 			parser.parse(inputStream);
+			return state.getConfig().getClient();
 		} catch (Exception e) {
 			throw new RuntimeException("Error occurred.  Cause: " + e, e);
 		}
+	}
+	
+	private void addSqlMapConfigNodelets() {
+		parser.addNodelet("/mirror/end()", new Nodelet() {
+			@Override
+			public void process(Node node) throws Exception {
+				state.getConfig().finalizeSqlMapConfig();
+			}
+		});
 	}
 	
 	private void addGlobalPropNodelets() {
@@ -66,12 +79,18 @@ public class SqlMapConfigParser {
 				state.setDataSource(dataSource);
 			}
 		});
+		parser.addNodelet("/mirror/setting/@scan-package", new Nodelet() {
+			@Override
+			public void process(Node node) throws Exception {
+				state.getConfig().setEntityPackage(node.getNodeValue());
+			}
+		});
 	}
 	
 	private void addBeanCreateNodelets() {
 		 // temp variable
-		final BeanInfoManager beanManager = new BeanInfoManager();
-		final BeanInfo temp[] = new BeanInfo[1];
+		final BeanNodeManager beanManager = new BeanNodeManager();
+		final BeanNode temp[] = new BeanNode[1];
 		
 		parser.addNodelet("/mirror/bean", new Nodelet() {
 			@Override
@@ -82,7 +101,7 @@ public class SqlMapConfigParser {
 				String initMethod = attr.getProperty("init-method");
 				try {
 					Class<?> beanClass = Resources.classForName(className);
-					temp[0] = new BeanInfo(beanName, beanClass, initMethod);
+					temp[0] = new BeanNode(beanName, beanClass, initMethod);
 				} catch (Exception e) {
 					throw new BeanCreateException("Error creating bean with name '" + beanName + "' instantiation of bean failed." +
 							"  Cause: No bean class specified on bean definition");
@@ -200,15 +219,15 @@ public class SqlMapConfigParser {
 		parser.addNodelet("/mirror/bean/end()", new Nodelet() {
 			@Override
 			public void process(Node node) throws Exception {
-				beanManager.addBeanInfo(temp[0]);
+				beanManager.addBeanNode(temp[0]);
 			}
 		});
 		
 		parser.addNodelet("/mirror/setting", new Nodelet() {
 			@Override
 			public void process(Node node) throws Exception {
-				for (BeanInfo beanInfo : beanManager.build()) {
-					state.getBeanManager().registry(beanInfo.getBeanName(), beanInfo.getBean());
+				for (BeanNode beanNode : beanManager.build()) {
+					state.getBeanManager().registry(beanNode.getBeanName(), beanNode.getBean());
 				}
 			}
 		});

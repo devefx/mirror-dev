@@ -209,6 +209,7 @@
 				</xsd:annotation>
 			</xsd:attribute>
 			<xsd:attribute name="cache"/>
+			<xsd:attribute name="scan-package"/>
 		</xsd:complexType>
 	</xsd:element>
 </xsd:schema>
